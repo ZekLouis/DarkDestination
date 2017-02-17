@@ -54,10 +54,10 @@ class GameClient(ConnectionListener):
     def Network_error(self, data):
         print('error: %s', data['error'][1])
         connection.Close()
-                            
+
     def Network_disconnected(self, data):
         print('Server disconnected')
-        quitter()  
+        quitter()
 
 
 # CLASSES
@@ -150,7 +150,7 @@ if __name__ == '__main__':
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                quitter() 
+                quitter()
 
         if game_client.run:
             keys = pygame.key.get_pressed()
@@ -165,8 +165,7 @@ if __name__ == '__main__':
             soldier_sprite.clear(screen, background_image)
             soldier_sprite.draw(screen)
 
-        else: # game is not running 
+        else: # game is not running
             screen.blit(wait_image, wait_rect)
-            
-        pygame.display.flip()  
 
+        pygame.display.flip()

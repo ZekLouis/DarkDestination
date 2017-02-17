@@ -81,7 +81,7 @@ class ClientChannel(Channel):
 
 # SERVER
 class MyServer(Server):
-    
+
     channelClass = ClientChannel
 
     def __init__(self, *args, **kwargs):
@@ -143,7 +143,7 @@ class MyServer(Server):
                 self.send_soldiers()
 
             pygame.display.flip()
-            
+
 
 # PROGRAMME INIT
 if __name__ == '__main__':
