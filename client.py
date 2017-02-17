@@ -32,9 +32,6 @@ def quitter():
     my_pid = os.getpid()
     os.kill(my_pid,signal.SIGKILL)
 
-def add_soldier(soldier):
-    soldier_sprite.add(soldier)
-
 
 # PODSIXNET
 class GameClient(ConnectionListener):
