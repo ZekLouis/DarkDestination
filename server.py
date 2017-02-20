@@ -43,13 +43,25 @@ class Soldier(pygame.sprite.Sprite):
 
     def __init__(self, number):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_png('Pics/soldier_n.png')
-        self.orientation = 'n'
+        self.image, self.rect = load_png('Pics/survivor_e.png')
+        self.orientation = 'e'
         if number == 1:
             self.rect.center = [SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2]
 
     def update(self, keys):
-        if keys[K_UP]:
+        if keys[K_UP] and keys[K_LEFT]:
+            self.orientation = 'nw'
+            self.rect = self.rect.move([-10,-10])
+        elif keys[K_UP] and keys[K_RIGHT]:
+            self.orientation = 'ne'
+            self.rect = self.rect.move([10,-10])
+        elif keys[K_DOWN] and keys[K_LEFT]:
+            self.orientation = 'sw'
+            self.rect = self.rect.move([-10,10])
+        elif keys[K_DOWN] and keys[K_RIGHT]:
+            self.orientation = 'se'
+            self.rect = self.rect.move([10,10])
+        elif keys[K_UP]:
             self.orientation = 'n'
             self.rect = self.rect.move([0,-10])
         elif keys[K_DOWN]:

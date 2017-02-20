@@ -58,17 +58,88 @@ class GameClient(ConnectionListener):
 
 
 # CLASSES
-class Soldier2(pygame.sprite.Sprite, ConnectionListener):
+class Soldier(pygame.sprite.Sprite, ConnectionListener):
     """Class for the player"""
 
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image,self.rect=load_png("Pics/soldier_n_r.png")
-        self.image_n,_ = load_png("Pics/soldier_n_r.png")
-        self.image_s,_ = load_png("Pics/soldier_s_r.png")
-        self.image_w,_ = load_png("Pics/soldier_w_r.png")
-        self.image_e,_ = load_png("Pics/soldier_e_r.png")
+        """
+        self.images = []
+        self.rects = []
+        self.image, self.rect = load_png('Pics/survivor_e.png')
+        """
+
+
+        """
+        self.images.append(image)
+        self.rects.append(rect)
+        image, rect = load_png('Pics/survivor_move/survivor-move_rifle_1.png')
+        self.images.append(image)
+        self.rects.append(rect)
+        """
+
+
+
+
+        """
+        self.index = 0
+        self.image = self.images[self.index]
+        self.rect = self.rects[self.index]
+        """
+        self.image, self.rect = load_png('Pics/survivor_e.png')
+        self.image_n,_ = load_png("Pics/survivor_n.png")
+        self.image_s,_ = load_png("Pics/survivor_s.png")
+        self.image_w,_ = load_png("Pics/survivor_w.png")
+        self.image_e,_ = load_png("Pics/survivor_e.png")
+        self.image_n_e,_ = load_png("Pics/survivor_n_e.png")
+        self.image_s_e,_ = load_png("Pics/survivor_s_e.png")
+        self.image_n_w,_ = load_png("Pics/survivor_n_w.png")
+        self.image_s_w,_ = load_png("Pics/survivor_s_w.png")
         self.rect.center = [ SCREEN_WIDTH/2 +100, SCREEN_HEIGHT/2 ]
+        self.orientation = 'e'
+
+    def Network_soldier(self,data):
+        self.orientation = data['soldier1'][2]
+        if self.orientation == 'n':
+            self.image = self.image_n
+        elif self.orientation == 's':
+            self.image = self.image_s
+        elif self.orientation == 'w':
+            self.image = self.image_w
+        elif self.orientation == 'e':
+            self.image = self.image_e
+        elif self.orientation == 'ne':
+            self.image = self.image_n_e
+        elif self.orientation == 'nw':
+            self.image = self.image_n_w
+        elif self.orientation == 'se':
+            self.image = self.image_s_e
+        elif self.orientation == 'sw':
+            self.image = self.image_s_w
+        self.rect.center = data['soldier1'][0:2]
+
+
+    def update(self):
+        self.Pump()
+
+    def getImage(self):
+        return self.image
+
+    def getRect(self):
+        return self.rect
+
+
+class Soldier2(pygame.sprite.Sprite, ConnectionListener):
+    """Class for the player"""
+
+    def __init__(self):
+    	pygame.sprite.Sprite.__init__(self)
+    	self.image,self.rect=load_png("Pics/soldier_n.png")
+    	self.image_n,_ = load_png("Pics/soldier_n.png")
+    	self.image_s,_ = load_png("Pics/soldier_s.png")
+    	self.image_w,_ = load_png("Pics/soldier_w.png")
+    	self.image_e,_ = load_png("Pics/soldier_e.png")
+        self.rect.center = [ SCREEN_WIDTH/2 -100, SCREEN_HEIGHT/2 ]
         self.orientation = 'n'
 
     def Network_soldier(self,data):
@@ -87,35 +158,11 @@ class Soldier2(pygame.sprite.Sprite, ConnectionListener):
     def update(self):
         self.Pump()
 
+    def getImage(self):
+        return self.image
 
-class Soldier(pygame.sprite.Sprite, ConnectionListener):
-    """Class for the player"""
-
-    def __init__(self):
-    	pygame.sprite.Sprite.__init__(self)
-    	self.image,self.rect=load_png("Pics/soldier_n.png")
-    	self.image_n,_ = load_png("Pics/soldier_n.png")
-    	self.image_s,_ = load_png("Pics/soldier_s.png")
-    	self.image_w,_ = load_png("Pics/soldier_w.png")
-    	self.image_e,_ = load_png("Pics/soldier_e.png")
-        self.rect.center = [ SCREEN_WIDTH/2 -100, SCREEN_HEIGHT/2 ]
-        self.orientation = 'n'
-
-    def Network_soldier(self,data):
-        self.orientation = data['soldier1'][2]
-        if self.orientation == 'n':
-            self.image = self.image_n
-        elif self.orientation == 's':
-            self.image = self.image_s
-        elif self.orientation == 'w':
-            self.image = self.image_w
-        elif self.orientation == 'e':
-            self.image = self.image_e
-        self.rect.center = data['soldier1'][0:2]
-
-
-    def update(self):
-        self.Pump()
+    def getRect(self):
+        return self.rect
 
 # MAIN
 if __name__ == '__main__':
@@ -132,7 +179,8 @@ if __name__ == '__main__':
     pygame.key.set_repeat(1,1)
 
     # Elements
-    background_image, background_rect = load_png('Pics/background.jpg')
+    background_image, background_rect = load_png('Pics/map.png')
+    # background_image = pygame.transform.scale2x(background_image)
     wait_image, wait_rect = load_png('Pics/wait1.png')
     wait_rect.center = [ SCREEN_WIDTH/2, SCREEN_HEIGHT/2 ]
     screen.blit(background_image, background_rect)
@@ -159,8 +207,16 @@ if __name__ == '__main__':
             soldier_sprite.update()
 
             # drawings
-            soldier_sprite.clear(screen, background_image)
-            soldier_sprite.draw(screen)
+            # background_rect = background_rect.move([2,2])
+
+            screen.fill((255,255,255))
+            background_image = pygame.transform.scale(background_image, (background_rect.width*2,background_rect.height*2))
+            screen.blit(background_image, (0,0))
+            for soldier in soldier_sprite:
+                screen.blit(soldier.getImage(),soldier.getRect())
+
+            # soldier_sprite.clear(screen, background_image)
+            # soldier_sprite.draw(screen)
 
         else: # game is not running
             screen.blit(wait_image, wait_rect)
