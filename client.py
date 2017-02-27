@@ -169,6 +169,8 @@ if __name__ == '__main__':
     SCREEN_WIDTH = 1024
     SCREEN_HEIGHT = 768
 
+    pygame.display.set_caption('Dark Destination')
+
     # PodSixNet init
     game_client = GameClient(sys.argv[1],int(sys.argv[2]))
 
@@ -180,11 +182,17 @@ if __name__ == '__main__':
 
     # Elements
     background_image, background_rect = load_png('Pics/map.png')
+    background_image = pygame.transform.scale(background_image, (background_rect.width*2,background_rect.height*2))
+
+
     # background_image = pygame.transform.scale2x(background_image)
     wait_image, wait_rect = load_png('Pics/wait1.png')
     wait_rect.center = [ SCREEN_WIDTH/2, SCREEN_HEIGHT/2 ]
     screen.blit(background_image, background_rect)
+
+
     soldier_sprite = pygame.sprite.RenderClear()
+
     soldier_sprite.add(Soldier())
     soldier_sprite.add(Soldier2())
 
@@ -209,9 +217,14 @@ if __name__ == '__main__':
             # drawings
             # background_rect = background_rect.move([2,2])
 
-            screen.fill((255,255,255))
-            background_image = pygame.transform.scale(background_image, (background_rect.width*2,background_rect.height*2))
-            screen.blit(background_image, (0,0))
+            screen.fill((0,0,0))
+
+
+
+            background_rect = background_rect.move([10,10])
+            screen.blit(background_image, background_rect)
+
+
             for soldier in soldier_sprite:
                 screen.blit(soldier.getImage(),soldier.getRect())
 
