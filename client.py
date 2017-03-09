@@ -27,6 +27,11 @@ def load_png(name):
         raise SystemExit
     return image,image.get_rect()
 
+# Fonction permet de faire bouger l'image de fond
+def move_background(x,y):
+    global background_rect
+    background_rect = background_rect.move([x,y])
+
 def quitter():
     pygame.display.quit()
     my_pid = os.getpid()
@@ -116,6 +121,15 @@ class Soldier(pygame.sprite.Sprite, ConnectionListener):
             self.image = self.image_s_e
         elif self.orientation == 'sw':
             self.image = self.image_s_w
+
+        if self.rect.x+self.rect.width > SCREEN_WIDTH :
+            move_background(-10,0)
+        elif self.rect.x < 0 :
+            move_background(10,0)
+        elif self.rect.y+self.rect.height > SCREEN_HEIGHT :
+            move_background(0,-10)
+        elif self.rect.y < 0 :
+            move_background(0,10)
         self.rect.center = data['soldier1'][0:2]
 
 
@@ -221,8 +235,9 @@ if __name__ == '__main__':
 
 
 
-            background_rect = background_rect.move([10,10])
+            # background_rect = background_rect.move([10,10])
             screen.blit(background_image, background_rect)
+
 
 
             for soldier in soldier_sprite:
