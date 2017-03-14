@@ -122,19 +122,17 @@ class Soldier(pygame.sprite.Sprite, ConnectionListener):
         elif self.orientation == 'sw':
             self.image = self.image_s_w
 
-        if self.rect.x+self.rect.width > SCREEN_WIDTH :
-            move_background(-10,0)
-        elif self.rect.x < 0 :
-            move_background(10,0)
-        elif self.rect.y+self.rect.height > SCREEN_HEIGHT :
-            move_background(0,-10)
-        elif self.rect.y < 0 :
-            move_background(0,10)
         self.rect.center = data['soldier1'][0:2]
 
 
     def update(self):
         self.Pump()
+
+    def getX(self):
+        return self.rect.x
+
+    def getY(self):
+        return self.rect.y
 
     def getImage(self):
         return self.image
@@ -172,6 +170,12 @@ class Soldier2(pygame.sprite.Sprite, ConnectionListener):
     def update(self):
         self.Pump()
 
+    def getX(self):
+        return self.rect.x
+
+    def getY(self):
+        return self.rect.y
+
     def getImage(self):
         return self.image
 
@@ -207,8 +211,14 @@ if __name__ == '__main__':
 
     soldier_sprite = pygame.sprite.RenderClear()
 
-    soldier_sprite.add(Soldier())
-    soldier_sprite.add(Soldier2())
+    soldier1 = Soldier()
+    soldier2 = Soldier2()
+
+    soldier_sprite.add(soldier1)
+    soldier_sprite.add(soldier2)
+    player1 = False
+    cameraX = 0
+    cameraY = 0
 
     while True:
         clock.tick(60)
@@ -233,20 +243,23 @@ if __name__ == '__main__':
 
             screen.fill((0,0,0))
 
-
+            #Calculer offset camera
+            cameraX = (soldier1.getX() if player1 else soldier2.getX())-(SCREEN_WIDTH/2)
+            cameraY = (soldier1.getY() if player1 else soldier2.getY())-(SCREEN_HEIGHT/2)
 
             # background_rect = background_rect.move([10,10])
-            screen.blit(background_image, background_rect)
+            screen.blit(background_image, (-cameraX, -cameraY))
 
 
 
             for soldier in soldier_sprite:
-                screen.blit(soldier.getImage(),soldier.getRect())
+                screen.blit(soldier.getImage(),(soldier.getX()-cameraX, soldier.getY()-cameraY))
 
             # soldier_sprite.clear(screen, background_image)
             # soldier_sprite.draw(screen)
 
         else: # game is not running
             screen.blit(wait_image, wait_rect)
+            player1 = True
 
         pygame.display.flip()
