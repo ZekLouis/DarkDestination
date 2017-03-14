@@ -13,8 +13,13 @@ from pygame.locals import *
 import random
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
-import time,sys
+import time, sys
 
+
+# Importation de la map (tableau) niveau.carte
+import niveau
+
+maps = niveau.carte
 
 
 # FUNCTIONS *******************
@@ -38,6 +43,13 @@ def quitter():
     os.kill(my_pid,signal.SIGKILL)
 
 # GAME CLASSES ****************
+class Block(pygame.sprite.Sprite):
+    """Class for block collition"""
+
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.rect = pygame.Rect(x,y,20,20)
+
 class Soldier(pygame.sprite.Sprite):
     """Class for the player"""
 
@@ -49,6 +61,8 @@ class Soldier(pygame.sprite.Sprite):
             self.rect.center = [SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2]
 
     def update(self, keys):
+        rectx = self.rect.x
+        recty = self.rect.y
         if keys[K_UP] and keys[K_LEFT]:
             self.orientation = 'nw'
             self.rect = self.rect.move([-10,-10])
@@ -73,6 +87,12 @@ class Soldier(pygame.sprite.Sprite):
         elif keys[K_RIGHT]:
             self.orientation = 'e'
             self.rect = self.rect.move([10,0])
+
+        # Vérification de la position
+        if pygame.sprite.spritecollide(self, MAP, False):
+            #print '---COLLIDE---',self.rect.x,self.rect.y
+            self.rect.x = rectx
+            self.rect.y = recty
 
 # PODSIXNET *********************
 class ClientChannel(Channel):
@@ -122,6 +142,8 @@ class MyServer(Server):
 
     # SENDING FUNCTIONS
     def send_soldiers(self):
+        while len(self.clients) != 2 :
+            pass
         soldier1 = self.clients[0].soldier
         soldier2 = self.clients[1].soldier
         message1 = [ soldier1.rect.centerx, soldier1.rect.centery, soldier1.orientation ]
@@ -161,5 +183,16 @@ class MyServer(Server):
 if __name__ == '__main__':
     SCREEN_WIDTH = 1024
     SCREEN_HEIGHT = 768
+    MAP = pygame.sprite.RenderClear()
+    y = 0
+    for ligne in maps:
+        x = 0
+        for char in ligne:
+            if char == "#":
+                block = Block(x,y)
+                MAP.add(block)
+                print '--ADD BLOCK--',x,':',y,'rect',block.rect
+            x+=20
+        y+=20
     my_server = MyServer(localaddr = (sys.argv[1],int(sys.argv[2])))
     my_server.launch_game()
