@@ -14,6 +14,7 @@ from pygame.locals import *
 import random
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
+from vector2D import Vec2d
 
 
 # Importation de la map (tableau) niveau.carte
@@ -36,6 +37,47 @@ def load_png(name):
         print('Cannot load image: %s' % name)
         raise SystemExit
     return image,image.get_rect()
+
+"""Test collide sprite"""
+def getCaseMap(x,y):
+    return pygame.sprite.spritecollide(Sprite((x,y),(1,1)), MAP, False)
+
+"""Cette fonction permet de retourner le vecteur directeur que le zombie doit suivre pour être attiré"""
+def getVecteurDirecteur(pointA, pointB, recur):
+
+    if recur==0:
+        return False
+
+    dist = (pointA - pointB).length
+    vectDirecteurBA = (pointA - pointB).normalized
+    pasDeCollision = True
+
+    i = 0
+    while i < dist/20:
+        if not pasDeCollision:
+            break
+        somme = pointB + vectDirecteurBA * 20 * i
+        if getCaseMap(somme.x, somme.y) == "#":
+            pasDeCollision = False
+
+    if pasDeCollision :
+        return vectDirecteur
+
+    vectDirecteurBissectrice = Vec2d(-vectDirecteur.y, vectDirecteur.x) # La classe proposée offre en fait une méthode pour obtenir un vecteur orthogonal à un autre !
+
+    for i in range(-2,2):
+        if False:
+            break
+        if i!=0:
+            pointC = pointB + vectDirecteurBA * (dist/2) + i * vectDirecteurBissectrice * (dist/2)
+            vectAC = getVecteurDirecteur(pointA, pointC, recur - 1)
+            vectCB = getVecteurDirecteur(pointC, pointB, recur - 1)
+
+            if vectAC and vectCB:
+                return vectAC
+
+    return False
+
 
 def quitter():
     pygame.display.quit()
@@ -88,8 +130,30 @@ class Zombie(pygame.sprite.Sprite):
         self.rect.x = SPAWNZOMBIE[spawnNumber].getX()
         self.rect.y = SPAWNZOMBIE[spawnNumber].getY()
 
-    def update(self):
-        pass
+    def update(self, soldier):
+        vectDir = getVecteurDirecteur(Vec2d(self.rect.x,self.rect.y),Vec2d(soldier.getX(),soldier.getY()),5)
+        print vectDir
+        """orientations = ['n', 's', 'e', 'w']
+        newOrientation = random.choice(orientations)
+        rectx = self.rect.x
+        recty = self.rect.y
+        if newOrientation=='n':
+            self.orientation = 'n'
+            self.rect = self.rect.move([0,-1])
+        elif newOrientation=='s':
+            self.orientation = 's'
+            self.rect = self.rect.move([0,1])
+        elif newOrientation=='w':
+            self.orientation = 'w'
+            self.rect = self.rect.move([-1,0])
+        elif newOrientation=='e':
+            self.orientation = 'e'
+            self.rect = self.rect.move([1,0])
+        # Vérification de la position
+        if pygame.sprite.spritecollide(self, MAP, False):
+            #print '---COLLIDE---',self.rect.x,self.rect.y
+            self.rect.x = rectx
+            self.rect.y = recty"""
 
     def getId(self):
         return self.id
@@ -144,6 +208,13 @@ class Soldier(pygame.sprite.Sprite):
             self.rect.x = rectx
             self.rect.y = recty
 
+    def getX(self):
+        return self.rect.x
+
+    def getY(self):
+        return self.rect.y
+
+
 # PODSIXNET *********************
 class ClientChannel(Channel):
 
@@ -185,7 +256,7 @@ class MyServer(Server):
 
             self.zombies = []
 
-            for i in range(0,3):
+            for i in range(0,1):
                 randspawn = randint(0,len(SPAWNZOMBIE)-1)
                 nouveau_zombie = Zombie(randspawn, len(self.zombies))
                 self.zombies.append(nouveau_zombie)
@@ -215,7 +286,12 @@ class MyServer(Server):
             client.Send({'action':'soldier', 'soldier1':message1, 'soldier2':message2})
 
     def send_zombies(self):
-        pass
+        for zombie in self.zombies:
+            zombie.update(self.clients[0].soldier)
+        for client in self.clients:
+            for zombie in self.zombies:
+                message = [ zombie.rect.centerx, zombie.rect.centery, zombie.orientation ]
+                client.Send({'action':'zombieMouvements','id':zombie.getId(),'message':message})
 
     # MAIN LOOP
     def launch_game(self):
@@ -276,7 +352,7 @@ if __name__ == '__main__':
         y+=20
 
     print len(MAP),"BLOCK SPAWNED"
-    print len(SPAWNSOLDIER),"SPAWN SOLDIER SPAWNED"
-    print len(SPAWNZOMBIE),"SPAWN ZOMBIE SPAWNED"
+    print len(SPAWNSOLDIER),"SPAWN SOLDIER"
+    print len(SPAWNZOMBIE),"SPAWN ZOMBIE"
     my_server = MyServer(localaddr = (sys.argv[1],int(sys.argv[2])))
     my_server.launch_game()

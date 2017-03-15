@@ -64,12 +64,13 @@ class GameClient(ConnectionListener):
 class Zombie(pygame.sprite.Sprite):
     """Class for the zombie"""
 
-    def __init__(self, x, y, orientation):
+    def __init__(self, id, x, y, orientation):
         pygame.sprite.Sprite.__init__(self)
         self.image, self.rect = load_png('Pics/zombie_e.png')
         self.orientation = orientation
         self.rect.centerx = x
         self.rect.centery = y
+        self.id = id
 
     def update(self):
         pass
@@ -83,6 +84,14 @@ class Zombie(pygame.sprite.Sprite):
     def getY(self):
         return self.rect.y
 
+    def getId(self):
+        return self.id
+
+    def setXYOr(self, x, y, orientation):
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.orientation = orientation
+
 # CLASSES
 class ZombieGroups(pygame.sprite.Sprite, ConnectionListener):
     """Class for the zombie groups"""
@@ -94,12 +103,15 @@ class ZombieGroups(pygame.sprite.Sprite, ConnectionListener):
 
     def Network_zombie(self,data):
         print data['message']
-        nouveauZombie = Zombie(data['message'][0],data['message'][1],data['message'][2])
+        nouveauZombie = Zombie(data['id'],data['message'][0],data['message'][1],data['message'][2])
         self.zombiesSprite.add(nouveauZombie)
         self.zombies.append(nouveauZombie)
 
     def Network_zombieMouvements(self,data):
-        pass
+        print data['id'],"mouvement zombie",data['message']
+        for zombie in self.zombiesSprite:
+            if zombie.getId()==data['id']:
+                zombie.setXYOr(data['message'][0],data['message'][1],data['message'][2])
 
     def update(self):
         self.Pump()
