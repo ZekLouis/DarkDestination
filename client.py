@@ -61,36 +61,54 @@ class GameClient(ConnectionListener):
         print('Server disconnected')
         quitter()
 
+class Zombie(pygame.sprite.Sprite):
+    """Class for the zombie"""
+
+    def __init__(self, x, y, orientation):
+        pygame.sprite.Sprite.__init__(self)
+        self.image, self.rect = load_png('Pics/zombie_e.png')
+        self.orientation = orientation
+        self.rect.x = x
+        self.rect.y = y
+
+    def update(self):
+        pass
+
+    def getImage(self):
+        return self.image
+
+    def getX(self):
+        return self.rect.x
+
+    def getY(self):
+        return self.rect.y
 
 # CLASSES
+class ZombieGroups(pygame.sprite.Sprite, ConnectionListener):
+    """Class for the zombie groups"""
+
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.zombies = []
+        self.zombiesSprite = pygame.sprite.RenderClear()
+
+    def Network_zombie(self,data):
+        print data['message']
+        nouveauZombie = Zombie(data['message'][0],data['message'][1],data['message'][2])
+        self.zombiesSprite.add(nouveauZombie)
+        self.zombies.append(nouveauZombie)
+
+    def Network_zombieMouvements(self,data):
+        pass
+
+    def update(self):
+        self.Pump()
+
 class Soldier(pygame.sprite.Sprite, ConnectionListener):
     """Class for the player"""
 
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        """
-        self.images = []
-        self.rects = []
-        self.image, self.rect = load_png('Pics/survivor_e.png')
-        """
-
-
-        """
-        self.images.append(image)
-        self.rects.append(rect)
-        image, rect = load_png('Pics/survivor_move/survivor-move_rifle_1.png')
-        self.images.append(image)
-        self.rects.append(rect)
-        """
-
-
-
-
-        """
-        self.index = 0
-        self.image = self.images[self.index]
-        self.rect = self.rects[self.index]
-        """
         self.image, self.rect = load_png('Pics/survivor_e.png')
         self.image_n,_ = load_png("Pics/survivor_n.png")
         self.image_s,_ = load_png("Pics/survivor_s.png")
@@ -124,7 +142,6 @@ class Soldier(pygame.sprite.Sprite, ConnectionListener):
 
         self.rect.center = data['soldier1'][0:2]
 
-
     def update(self):
         self.Pump()
 
@@ -146,11 +163,11 @@ class Soldier2(pygame.sprite.Sprite, ConnectionListener):
 
     def __init__(self):
     	pygame.sprite.Sprite.__init__(self)
-    	self.image,self.rect=load_png("Pics/soldier_n.png")
-    	self.image_n,_ = load_png("Pics/soldier_n.png")
-    	self.image_s,_ = load_png("Pics/soldier_s.png")
-    	self.image_w,_ = load_png("Pics/soldier_w.png")
-    	self.image_e,_ = load_png("Pics/soldier_e.png")
+    	self.image,self.rect=load_png("Pics/survivor2_n.png")
+    	self.image_n,_ = load_png("Pics/survivor2_n.png")
+    	self.image_s,_ = load_png("Pics/survivor2_s.png")
+    	self.image_w,_ = load_png("Pics/survivor2_w.png")
+    	self.image_e,_ = load_png("Pics/survivor2_e.png")
         self.rect.center = [ SCREEN_WIDTH/2 -100, SCREEN_HEIGHT/2 ]
         self.orientation = 'n'
 
@@ -165,7 +182,6 @@ class Soldier2(pygame.sprite.Sprite, ConnectionListener):
         elif self.orientation == 'e':
             self.image = self.image_e
         self.rect.center = data['soldier2'][0:2]
-
 
     def update(self):
         self.Pump()
@@ -210,12 +226,14 @@ if __name__ == '__main__':
 
 
     soldier_sprite = pygame.sprite.RenderClear()
+    zombie_sprite = ZombieGroups()
 
     soldier1 = Soldier()
     soldier2 = Soldier2()
 
     soldier_sprite.add(soldier1)
     soldier_sprite.add(soldier2)
+
     player1 = False
     cameraX = 0
     cameraY = 0
@@ -237,6 +255,7 @@ if __name__ == '__main__':
 
             # updates
             soldier_sprite.update()
+            zombie_sprite.update()
 
             # drawings
             # background_rect = background_rect.move([2,2])
@@ -254,6 +273,9 @@ if __name__ == '__main__':
 
             for soldier in soldier_sprite:
                 screen.blit(soldier.getImage(),(soldier.getX()-cameraX, soldier.getY()-cameraY))
+
+            for zombie in zombie_sprite.zombies:
+                screen.blit(zombie.getImage(), (zombie.getX()-cameraX,zombie.getY()-cameraY))
 
             # soldier_sprite.clear(screen, background_image)
             # soldier_sprite.draw(screen)
