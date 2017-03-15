@@ -68,8 +68,8 @@ class Zombie(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.image, self.rect = load_png('Pics/zombie_e.png')
         self.orientation = orientation
-        self.rect.x = x
-        self.rect.y = y
+        self.rect.centerx = x
+        self.rect.centery = y
 
     def update(self):
         pass
