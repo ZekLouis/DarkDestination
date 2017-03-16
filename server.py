@@ -40,7 +40,8 @@ def load_png(name):
 
 """Test collide sprite"""
 def getCaseMap(x,y):
-    return pygame.sprite.spritecollide(Sprite((x,y),(1,1)), MAP, False)
+    return maps[int(y/20)][int(x/20)] == "#"
+
 
 """Cette fonction permet de retourner le vecteur directeur que le zombie doit suivre pour être attiré"""
 def getVecteurDirecteur(pointA, pointB, recur):
@@ -48,33 +49,29 @@ def getVecteurDirecteur(pointA, pointB, recur):
     if recur==0:
         return False
 
-    dist = (pointA - pointB).length
-    vectDirecteurBA = (pointA - pointB).normalized
+    dist = pointB.get_distance(pointA)
+    vectDirecteurAB = (pointB - pointA).normalized()
     pasDeCollision = True
 
-    i = 0
-    while i < dist/20:
-        if not pasDeCollision:
-            break
-        somme = pointB + vectDirecteurBA * 20 * i
-        if getCaseMap(somme.x, somme.y) == "#":
+    i = 1
+    while i < dist/20 and pasDeCollision:
+        somme = pointA + (vectDirecteurAB * (20 * i))
+        if getCaseMap(somme.x, somme.y):
             pasDeCollision = False
+        i += 1
 
     if pasDeCollision :
-        return vectDirecteur
+        return vectDirecteurAB
 
-    vectDirecteurBissectrice = Vec2d(-vectDirecteur.y, vectDirecteur.x) # La classe proposée offre en fait une méthode pour obtenir un vecteur orthogonal à un autre !
+    vectDirecteurBissectrice = vectDirecteurAB.perpendicular()
 
-    for i in range(-2,2):
-        if False:
-            break
-        if i!=0:
-            pointC = pointB + vectDirecteurBA * (dist/2) + i * vectDirecteurBissectrice * (dist/2)
-            vectAC = getVecteurDirecteur(pointA, pointC, recur - 1)
-            vectCB = getVecteurDirecteur(pointC, pointB, recur - 1)
+    for i in range(-3,3):
+        pointC = pointA + (vectDirecteurAB * (dist/2)) + vectDirecteurBissectrice * (i * (dist/3))
+        vectAC = getVecteurDirecteur(pointA, pointC, recur - 1)
+        vectCB = getVecteurDirecteur(pointC, pointB, recur - 1)
 
-            if vectAC and vectCB:
-                return vectAC
+        if vectAC and vectCB:
+            return vectAC
 
     return False
 
@@ -118,6 +115,12 @@ class Block(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.rect = pygame.Rect(x,y,20,20)
 
+class Sprite(pygame.sprite.Sprite):
+
+    def __init__(self, vec):
+        pygame.sprite.Sprite.__init__(self)
+        self.rect = pygame.Rect(vec.x,vec.y,1,1)
+
 class Zombie(pygame.sprite.Sprite):
     """Class for the zombie"""
 
@@ -131,12 +134,20 @@ class Zombie(pygame.sprite.Sprite):
         self.rect.y = SPAWNZOMBIE[spawnNumber].getY()
 
     def update(self, soldier):
-        vectDir = getVecteurDirecteur(Vec2d(self.rect.x,self.rect.y),Vec2d(soldier.getX(),soldier.getY()),5)
-        print vectDir
-        """orientations = ['n', 's', 'e', 'w']
-        newOrientation = random.choice(orientations)
+
+        vectDir = getVecteurDirecteur(Vec2d(self.rect.x,self.rect.y),Vec2d(soldier.getX(),soldier.getY()),3)
+        print '--VEC--',vectDir
+        if vectDir:
+            self.rect.x += vectDir.x*3
+            self.rect.y += vectDir.y*3
+
+
         rectx = self.rect.x
         recty = self.rect.y
+        """
+        #orientations = ['n', 's', 'e', 'w']
+        #newOrientation = random.choice(orientations)
+
         if newOrientation=='n':
             self.orientation = 'n'
             self.rect = self.rect.move([0,-1])
@@ -149,11 +160,23 @@ class Zombie(pygame.sprite.Sprite):
         elif newOrientation=='e':
             self.orientation = 'e'
             self.rect = self.rect.move([1,0])
+
+        if self.rect.x > soldier.getX():
+            self.rect = self.rect.move([-1,0])
+        else:
+            self.rect = self.rect.move([1,0])
+
+        if self.rect.y > soldier.getY():
+            self.rect = self.rect.move([0,-1])
+        else :
+            self.rect = self.rect.move([0,1])
+        """
+
         # Vérification de la position
         if pygame.sprite.spritecollide(self, MAP, False):
             #print '---COLLIDE---',self.rect.x,self.rect.y
             self.rect.x = rectx
-            self.rect.y = recty"""
+            self.rect.y = recty
 
     def getId(self):
         return self.id
