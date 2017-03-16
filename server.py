@@ -5,7 +5,7 @@
     Very simple game with Pygame
 """
 
-import sys, pygame
+import sys, pygame, math
 import os
 import time
 import signal
@@ -40,7 +40,10 @@ def load_png(name):
 
 """Test collide sprite"""
 def getCaseMap(x,y):
-    return maps[int(y/20)][int(x/20)] == "#"
+    try :
+        return maps[int(y/20)][int(x/20)] == "#"
+    except IndexError :
+        return False
 
 
 """Cette fonction permet de retourner le vecteur directeur que le zombie doit suivre pour être attiré"""
@@ -82,6 +85,36 @@ def quitter():
     os.kill(my_pid,signal.SIGKILL)
 
 # GAME CLASSES ****************
+class Shot(pygame.sprite.Sprite):
+    """Class for shot"""
+
+    def __init__(self, x, y, orientation):
+        pygame.sprite.Sprite.__init__(self)
+        self.image, self.rect = load_png('Pics/shot_n_w.png')
+        self.orientation = orientation
+        self.rect.x = x
+        self.rect.y = y
+
+    def update(self):
+        if self.orientation == 'nw':
+            self.rect = self.rect.move([-10,-10])
+        elif self.orientation == 'ne':
+            self.rect = self.rect.move([10,-10])
+        elif self.orientation == 'sw':
+            self.rect = self.rect.move([-10,10])
+        elif self.orientation == 'se':
+            self.rect = self.rect.move([10,10])
+        elif self.orientation == 'n':
+            self.rect = self.rect.move([0,-10])
+        elif self.orientation == 's':
+            self.rect = self.rect.move([0,10])
+        elif self.orientation == 'w':
+            self.rect = self.rect.move([-10,0])
+        elif self.orientation == 'e':
+            self.rect = self.rect.move([10,0])
+
+        print '-moving shot-',self.rect.x,self.rect.y
+
 class SpawnSoldier(pygame.sprite.Sprite):
     """Class for object of spawn"""
 
@@ -136,7 +169,6 @@ class Zombie(pygame.sprite.Sprite):
     def update(self, soldier):
 
         vectDir = getVecteurDirecteur(Vec2d(self.rect.x,self.rect.y),Vec2d(soldier.getX(),soldier.getY()),3)
-        print '--VEC--',vectDir
         if vectDir:
             self.rect.x += vectDir.x*3
             self.rect.y += vectDir.y*3
@@ -144,39 +176,15 @@ class Zombie(pygame.sprite.Sprite):
 
         rectx = self.rect.x
         recty = self.rect.y
-        """
-        #orientations = ['n', 's', 'e', 'w']
-        #newOrientation = random.choice(orientations)
-
-        if newOrientation=='n':
-            self.orientation = 'n'
-            self.rect = self.rect.move([0,-1])
-        elif newOrientation=='s':
-            self.orientation = 's'
-            self.rect = self.rect.move([0,1])
-        elif newOrientation=='w':
-            self.orientation = 'w'
-            self.rect = self.rect.move([-1,0])
-        elif newOrientation=='e':
-            self.orientation = 'e'
-            self.rect = self.rect.move([1,0])
-
-        if self.rect.x > soldier.getX():
-            self.rect = self.rect.move([-1,0])
-        else:
-            self.rect = self.rect.move([1,0])
-
-        if self.rect.y > soldier.getY():
-            self.rect = self.rect.move([0,-1])
-        else :
-            self.rect = self.rect.move([0,1])
-        """
-
         # Vérification de la position
         if pygame.sprite.spritecollide(self, MAP, False):
             #print '---COLLIDE---',self.rect.x,self.rect.y
             self.rect.x = rectx
             self.rect.y = recty
+
+        if pygame.sprite.spritecollide(self, my_server.shots, True):
+            # Send zombie décédé
+            print 'Décès zombie'
 
     def getId(self):
         return self.id
@@ -224,6 +232,9 @@ class Soldier(pygame.sprite.Sprite):
         elif keys[K_RIGHT]:
             self.orientation = 'e'
             self.rect = self.rect.move([10,0])
+
+        if keys[K_SPACE]:
+            my_server.shots.add(Shot(self.rect.x,self.rect.y,self.orientation))
 
         # Vérification de la position
         if pygame.sprite.spritecollide(self, MAP, False):
@@ -278,8 +289,9 @@ class MyServer(Server):
                 client.Send({'action':'start'})
 
             self.zombies = []
+            self.shots = pygame.sprite.RenderClear()
 
-            for i in range(0,1):
+            for i in range(0,2):
                 randspawn = randint(0,len(SPAWNZOMBIE)-1)
                 nouveau_zombie = Zombie(randspawn, len(self.zombies))
                 self.zombies.append(nouveau_zombie)
@@ -310,7 +322,11 @@ class MyServer(Server):
 
     def send_zombies(self):
         for zombie in self.zombies:
-            zombie.update(self.clients[0].soldier)
+            # On regarde lequel des deux soldats est le plus prêt du zombie
+            if math.sqrt((self.clients[0].soldier.rect.x - zombie.rect.x)**2 + (self.clients[0].soldier.rect.y - zombie.rect.y)**2) > math.sqrt((self.clients[1].soldier.rect.x - zombie.rect.x)**2 + (self.clients[1].soldier.rect.y - zombie.rect.y)**2):
+                zombie.update(self.clients[1].soldier)
+            else:
+                zombie.update(self.clients[0].soldier)
         for client in self.clients:
             for zombie in self.zombies:
                 message = [ zombie.rect.centerx, zombie.rect.centery, zombie.orientation ]
@@ -341,6 +357,7 @@ class MyServer(Server):
                 # updates
                 self.send_soldiers()
                 self.send_zombies()
+                self.shots.update()
 
             pygame.display.flip()
 
