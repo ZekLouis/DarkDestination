@@ -39,6 +39,37 @@ def quitter():
 
 
 # PODSIXNET
+class Shot(pygame.sprite.Sprite, ConnectionListener):
+    """Class for shot"""
+
+    def __init__(self, id, x, y, orientation):
+        pygame.sprite.Sprite.__init__(self)
+        self.image, self.rect = load_png('Pics/shot_n_w.png')
+        self.orientation = orientation
+        self.rect.x = x
+        self.rect.y = y
+        self.id = id
+
+    def update(self, x, y, orientation):
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.orientation = orientation
+
+    def Network_shots(self,data):
+        print data['message']
+
+    def getImage(self):
+        return self.image
+
+    def getX(self):
+        return self.rect.x
+
+    def getY(self):
+        return self.rect.y
+
+    def getId(self):
+        return self.id
+
 class GameClient(ConnectionListener):
 
     def __init__(self, host, port):
@@ -72,8 +103,10 @@ class Zombie(pygame.sprite.Sprite):
         self.rect.centery = y
         self.id = id
 
-    def update(self):
-        pass
+    def update(self, x, y, orientation):
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.orientation = orientation
 
     def getImage(self):
         return self.image
@@ -87,12 +120,38 @@ class Zombie(pygame.sprite.Sprite):
     def getId(self):
         return self.id
 
-    def setXYOr(self, x, y, orientation):
-        self.rect.centerx = x
-        self.rect.centery = y
-        self.orientation = orientation
 
 # CLASSES
+class ShotsGroups(pygame.sprite.Sprite, ConnectionListener):
+    """Class for the zombie groups"""
+
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.shots = []
+        self.shotsSprite = pygame.sprite.RenderClear()
+
+    def Network_shots(self,data):
+        print '--- Nouveau shot ---'
+        print data['message']
+        nouveauShot = Shot(data['id'],data['message'][0],data['message'][1],data['message'][2])
+        self.shotsSprite.add(nouveauShot)
+        self.shots.append(nouveauShot)
+
+    def Network_shotsMouvements(self,data):
+        for shot in self.shotsSprite:
+            if shot.getId()==data['id']:
+                shot.update(data['message'][0],data['message'][1],data['message'][2])
+
+    def Network_removeShot(self,data):
+        for shot in self.shotsSprite:
+            if shot.getId()==data['id']:
+                print '-- REMOVING --',data['id']
+                self.shots.remove(shot)
+                self.shotsSprite.remove(shot)
+
+    def update(self):
+        self.Pump()
+
 class ZombieGroups(pygame.sprite.Sprite, ConnectionListener):
     """Class for the zombie groups"""
 
@@ -108,10 +167,16 @@ class ZombieGroups(pygame.sprite.Sprite, ConnectionListener):
         self.zombies.append(nouveauZombie)
 
     def Network_zombieMouvements(self,data):
-        print data['id'],"mouvement zombie",data['message']
         for zombie in self.zombiesSprite:
             if zombie.getId()==data['id']:
-                zombie.setXYOr(data['message'][0],data['message'][1],data['message'][2])
+                zombie.update(data['message'][0],data['message'][1],data['message'][2])
+
+    def Network_removeZombie(self,data):
+        for zombie in self.zombiesSprite:
+            if zombie.getId()==data['id']:
+                print '-- REMOVING --',data['id']
+                self.zombies.remove(zombie)
+                self.zombiesSprite.remove(zombie)
 
     def update(self):
         self.Pump()
@@ -121,15 +186,15 @@ class Soldier(pygame.sprite.Sprite, ConnectionListener):
 
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_png('Pics/survivor_e.png')
-        self.image_n,_ = load_png("Pics/survivor_n.png")
-        self.image_s,_ = load_png("Pics/survivor_s.png")
-        self.image_w,_ = load_png("Pics/survivor_w.png")
-        self.image_e,_ = load_png("Pics/survivor_e.png")
-        self.image_n_e,_ = load_png("Pics/survivor_n_e.png")
-        self.image_s_e,_ = load_png("Pics/survivor_s_e.png")
-        self.image_n_w,_ = load_png("Pics/survivor_n_w.png")
-        self.image_s_w,_ = load_png("Pics/survivor_s_w.png")
+        self.image, self.rect = load_png('Pics/survivor1/survivor_e.png')
+        self.image_n,_ = load_png("Pics/survivor1/survivor_n.png")
+        self.image_s,_ = load_png("Pics/survivor1/survivor_s.png")
+        self.image_w,_ = load_png("Pics/survivor1/survivor_w.png")
+        self.image_e,_ = load_png("Pics/survivor1/survivor_e.png")
+        self.image_n_e,_ = load_png("Pics/survivor1/survivor_n_e.png")
+        self.image_s_e,_ = load_png("Pics/survivor1/survivor_s_e.png")
+        self.image_n_w,_ = load_png("Pics/survivor1/survivor_n_w.png")
+        self.image_s_w,_ = load_png("Pics/survivor1/survivor_s_w.png")
         self.rect.center = [ SCREEN_WIDTH/2 +100, SCREEN_HEIGHT/2 ]
         self.orientation = 'e'
 
@@ -175,11 +240,15 @@ class Soldier2(pygame.sprite.Sprite, ConnectionListener):
 
     def __init__(self):
     	pygame.sprite.Sprite.__init__(self)
-    	self.image,self.rect=load_png("Pics/survivor2_n.png")
-    	self.image_n,_ = load_png("Pics/survivor2_n.png")
-    	self.image_s,_ = load_png("Pics/survivor2_s.png")
-    	self.image_w,_ = load_png("Pics/survivor2_w.png")
-    	self.image_e,_ = load_png("Pics/survivor2_e.png")
+    	self.image,self.rect=load_png("Pics/survivor2/survivor_n.png")
+    	self.image_n,_ = load_png("Pics/survivor2/survivor_n.png")
+    	self.image_s,_ = load_png("Pics/survivor2/survivor_s.png")
+    	self.image_w,_ = load_png("Pics/survivor2/survivor_w.png")
+    	self.image_e,_ = load_png("Pics/survivor2/survivor_e.png")
+        self.image_n_e,_ = load_png("Pics/survivor2/survivor_n_e.png")
+        self.image_s_e,_ = load_png("Pics/survivor2/survivor_s_e.png")
+        self.image_n_w,_ = load_png("Pics/survivor2/survivor_n_w.png")
+        self.image_s_w,_ = load_png("Pics/survivor2/survivor_s_w.png")
         self.rect.center = [ SCREEN_WIDTH/2 -100, SCREEN_HEIGHT/2 ]
         self.orientation = 'n'
 
@@ -193,6 +262,14 @@ class Soldier2(pygame.sprite.Sprite, ConnectionListener):
             self.image = self.image_w
         elif self.orientation == 'e':
             self.image = self.image_e
+        elif self.orientation == 'ne':
+            self.image = self.image_n_e
+        elif self.orientation == 'nw':
+            self.image = self.image_n_w
+        elif self.orientation == 'se':
+            self.image = self.image_s_e
+        elif self.orientation == 'sw':
+            self.image = self.image_s_w
         self.rect.center = data['soldier2'][0:2]
 
     def update(self):
@@ -239,6 +316,7 @@ if __name__ == '__main__':
 
     soldier_sprite = pygame.sprite.RenderClear()
     zombie_sprite = ZombieGroups()
+    shots_sprite = ShotsGroups()
 
     soldier1 = Soldier()
     soldier2 = Soldier2()
@@ -268,6 +346,7 @@ if __name__ == '__main__':
             # updates
             soldier_sprite.update()
             zombie_sprite.update()
+            shots_sprite.update()
 
             # drawings
             # background_rect = background_rect.move([2,2])
@@ -288,6 +367,9 @@ if __name__ == '__main__':
 
             for zombie in zombie_sprite.zombies:
                 screen.blit(zombie.getImage(), (zombie.getX()-cameraX,zombie.getY()-cameraY))
+
+            for shot in shots_sprite.shots:
+                screen.blit(shot.getImage(), (shot.getX()-cameraX,shot.getY()-cameraY))
 
             # soldier_sprite.clear(screen, background_image)
             # soldier_sprite.draw(screen)

@@ -16,11 +16,13 @@ from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
 from vector2D import Vec2d
 
-
 # Importation de la map (tableau) niveau.carte
 import niveau
 
+idShot = 0
 maps = niveau.carte
+vitesse = 10
+vitesseDiag = math.sqrt((vitesse*vitesse)/2)
 
 
 # FUNCTIONS *******************
@@ -88,32 +90,38 @@ def quitter():
 class Shot(pygame.sprite.Sprite):
     """Class for shot"""
 
-    def __init__(self, x, y, orientation):
+    def __init__(self, id, x, y, orientation):
         pygame.sprite.Sprite.__init__(self)
         self.image, self.rect = load_png('Pics/shot_n_w.png')
         self.orientation = orientation
         self.rect.x = x
         self.rect.y = y
+        self.id = id
 
     def update(self):
         if self.orientation == 'nw':
-            self.rect = self.rect.move([-10,-10])
+            self.rect = self.rect.move([-vitesseDiag,-vitesseDiag])
         elif self.orientation == 'ne':
-            self.rect = self.rect.move([10,-10])
+            self.rect = self.rect.move([vitesseDiag,-vitesseDiag])
         elif self.orientation == 'sw':
-            self.rect = self.rect.move([-10,10])
+            self.rect = self.rect.move([-vitesseDiag,vitesseDiag])
         elif self.orientation == 'se':
-            self.rect = self.rect.move([10,10])
+            self.rect = self.rect.move([vitesseDiag,vitesseDiag])
         elif self.orientation == 'n':
-            self.rect = self.rect.move([0,-10])
+            self.rect = self.rect.move([0,-vitesse])
         elif self.orientation == 's':
-            self.rect = self.rect.move([0,10])
+            self.rect = self.rect.move([0,vitesse])
         elif self.orientation == 'w':
-            self.rect = self.rect.move([-10,0])
+            self.rect = self.rect.move([-vitesse,0])
         elif self.orientation == 'e':
-            self.rect = self.rect.move([10,0])
+            self.rect = self.rect.move([vitesse,0])
 
-        print '-moving shot-',self.rect.x,self.rect.y
+        if pygame.sprite.spritecollide(self, MAP, False):
+            my_server.shots.remove(self)
+            my_server.sendRemoveShots(self)
+
+    def getId(self):
+        return self.id
 
 class SpawnSoldier(pygame.sprite.Sprite):
     """Class for object of spawn"""
@@ -182,9 +190,13 @@ class Zombie(pygame.sprite.Sprite):
             self.rect.x = rectx
             self.rect.y = recty
 
-        if pygame.sprite.spritecollide(self, my_server.shots, True):
-            # Send zombie décédé
-            print 'Décès zombie'
+        shots_list = pygame.sprite.spritecollide(self, my_server.shots, True)
+        if shots_list:
+            my_server.zombies.remove(self)
+            my_server.sendRemoveZombie(self)
+            for shot in shots_list:
+                my_server.shots.remove(shot)
+                my_server.sendRemoveShots(shot)
 
     def getId(self):
         return self.id
@@ -196,7 +208,7 @@ class Soldier(pygame.sprite.Sprite):
 
     def __init__(self, number):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_png('Pics/survivor_e.png')
+        self.image, self.rect = load_png('Pics/survivor2/survivor_e.png')
         self.orientation = 'e'
         if number == 1:
             self.rect.x = SPAWNSOLDIER[0].getX()
@@ -210,31 +222,38 @@ class Soldier(pygame.sprite.Sprite):
         recty = self.rect.y
         if keys[K_UP] and keys[K_LEFT]:
             self.orientation = 'nw'
-            self.rect = self.rect.move([-10,-10])
+            self.rect = self.rect.move([-vitesseDiag,-vitesseDiag])
         elif keys[K_UP] and keys[K_RIGHT]:
             self.orientation = 'ne'
-            self.rect = self.rect.move([10,-10])
+            self.rect = self.rect.move([vitesseDiag,-vitesseDiag])
         elif keys[K_DOWN] and keys[K_LEFT]:
             self.orientation = 'sw'
-            self.rect = self.rect.move([-10,10])
+            self.rect = self.rect.move([-vitesseDiag,vitesseDiag])
         elif keys[K_DOWN] and keys[K_RIGHT]:
             self.orientation = 'se'
-            self.rect = self.rect.move([10,10])
+            self.rect = self.rect.move([vitesseDiag,vitesseDiag])
         elif keys[K_UP]:
             self.orientation = 'n'
-            self.rect = self.rect.move([0,-10])
+            self.rect = self.rect.move([0,-vitesse])
         elif keys[K_DOWN]:
             self.orientation = 's'
-            self.rect = self.rect.move([0,10])
+            self.rect = self.rect.move([0,vitesse])
         elif keys[K_LEFT]:
             self.orientation = 'w'
-            self.rect = self.rect.move([-10,0])
+            self.rect = self.rect.move([-vitesse,0])
         elif keys[K_RIGHT]:
             self.orientation = 'e'
-            self.rect = self.rect.move([10,0])
+            self.rect = self.rect.move([vitesse,0])
+
+        global idShot
 
         if keys[K_SPACE]:
-            my_server.shots.add(Shot(self.rect.x,self.rect.y,self.orientation))
+            shot = Shot(idShot, self.rect.centerx,self.rect.centery,self.orientation)
+            my_server.shots.add(shot)
+            for client in my_server.clients:
+                message = [ shot.rect.centerx, shot.rect.centery, shot.orientation ]
+                client.Send({'action':'shots','id':shot.getId(),'message':message})
+            idShot += 1
 
         # Vérification de la position
         if pygame.sprite.spritecollide(self, MAP, False):
@@ -332,6 +351,21 @@ class MyServer(Server):
                 message = [ zombie.rect.centerx, zombie.rect.centery, zombie.orientation ]
                 client.Send({'action':'zombieMouvements','id':zombie.getId(),'message':message})
 
+    def send_shots(self):
+        for client in self.clients:
+            for shot in self.shots:
+                shot.update()
+                message = [ shot.rect.centerx, shot.rect.centery, shot.orientation ]
+                client.Send({'action':'shotsMouvements','id':shot.getId(),'message':message})
+
+    def sendRemoveZombie(self, zombie):
+        for client in self.clients:
+            client.Send({'action':'removeZombie','id':zombie.getId()})
+
+    def sendRemoveShots(self, shot):
+        for client in self.clients:
+            client.Send({'action':'removeShot','id':shot.getId()})
+
     # MAIN LOOP
     def launch_game(self):
         """Main function of the game"""
@@ -357,7 +391,7 @@ class MyServer(Server):
                 # updates
                 self.send_soldiers()
                 self.send_zombies()
-                self.shots.update()
+                self.send_shots()
 
             pygame.display.flip()
 
@@ -372,6 +406,8 @@ if __name__ == '__main__':
     SPAWNSOLDIER = []
     # Initialisation du groupe contenant les différents spawns pour les zombies
     SPAWNZOMBIE = []
+
+    # Lecture du fichier contenant les informations de la MAP (Lieux d'apparition, murs)
     y = 0
     for ligne in maps:
         x = 0
