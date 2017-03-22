@@ -1,12 +1,6 @@
-import niveau
+import time
 
-maps = niveau.carte
+temps = time.time()
 
-y=0
-for ligne in maps:
-    x = 0
-    for char in ligne:
-        if char == "#":
-            print x,':',y
-        x+=10
-    y+=10
+while True:
+	print time.time()-temps

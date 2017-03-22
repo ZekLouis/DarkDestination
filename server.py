@@ -18,11 +18,18 @@ from vector2D import Vec2d
 
 # Importation de la map (tableau) niveau.carte
 import niveau
-
+global idShot
 idShot = 0
 maps = niveau.carte
 vitesse = 10
 vitesseDiag = math.sqrt((vitesse*vitesse)/2)
+vitesseZombie = 1.1
+zombieTues = 0
+global manche
+manche = 1
+# Nombres de zombie nécéssaires à la manche 1
+global coeffManche
+coeffManche = 3
 
 
 # FUNCTIONS *******************
@@ -92,7 +99,7 @@ class Shot(pygame.sprite.Sprite):
 
     def __init__(self, id, x, y, orientation):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_png('Pics/shot_n_w.png')
+        self.image, self.rect = load_png('Pics/shot/tir-e.png')
         self.orientation = orientation
         self.rect.x = x
         self.rect.y = y
@@ -167,19 +174,26 @@ class Zombie(pygame.sprite.Sprite):
 
     def __init__(self, spawnNumber, id):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_png('Pics/zombie_e.png')
+        self.image, self.rect = load_png('Pics/zombie.png')
         self.orientation = 'e'
         self.id = id
+        self.angle = 0
         randspawn = randint(0,len(SPAWNZOMBIE)-1)
         self.rect.x = SPAWNZOMBIE[spawnNumber].getX()
         self.rect.y = SPAWNZOMBIE[spawnNumber].getY()
 
     def update(self, soldier):
-
         vectDir = getVecteurDirecteur(Vec2d(self.rect.x,self.rect.y),Vec2d(soldier.getX(),soldier.getY()),3)
+        angle = self.angle
+        global manche
         if vectDir:
-            self.rect.x += vectDir.x*3
-            self.rect.y += vectDir.y*3
+            self.angle = math.atan2(vectDir.x, vectDir.y)*180/math.pi
+            self.rect.x += vectDir.x*((coeffManche*manche)/2)*vitesseZombie
+            self.rect.y += vectDir.y*((coeffManche*manche)/2)*vitesseZombie
+            print ((coeffManche*manche)/2)*vitesseZombie
+            print vitesseZombie
+        else : 
+            self.angle = angle
 
 
         rectx = self.rect.x
@@ -194,6 +208,12 @@ class Zombie(pygame.sprite.Sprite):
         if shots_list:
             my_server.zombies.remove(self)
             my_server.sendRemoveZombie(self)
+            global zombieTues
+            zombieTues += 1
+            if zombieTues >= coeffManche*manche:
+                manche += 1
+                my_server.sendManche()
+                zombieTues = 0
             for shot in shots_list:
                 my_server.shots.remove(shot)
                 my_server.sendRemoveShots(shot)
@@ -298,6 +318,15 @@ class MyServer(Server):
         self.screen = pygame.display.set_mode((128, 128))
         print('Server launched')
 
+    def nouveauZombie(self):
+        print 'NOUVEAU ZOMBIE SPAWN'
+        randspawn = randint(0,len(SPAWNZOMBIE)-1)
+        nouveau_zombie = Zombie(randspawn, len(self.zombies))
+        self.zombies.append(nouveau_zombie)
+        for client in self.clients:
+                message = [ nouveau_zombie.rect.centerx, nouveau_zombie.rect.centery, nouveau_zombie.orientation, nouveau_zombie.angle ]
+                client.Send({'action':'zombie','id':nouveau_zombie.getId(),'message':message})
+
     def Connected(self, channel, addr):
         self.clients.append(channel)
         channel.create_soldier(len(self.clients))
@@ -316,8 +345,10 @@ class MyServer(Server):
                 self.zombies.append(nouveau_zombie)
 
             for client in self.clients:
+                global manche
+                client.Send({'action':'manche','message':manche})
                 for zombie in self.zombies:
-                    message = [ zombie.rect.centerx, zombie.rect.centery, zombie.orientation ]
+                    message = [ zombie.rect.centerx, zombie.rect.centery, zombie.orientation, zombie.angle ]
                     client.Send({'action':'zombie','id':zombie.getId(),'message':message})
 
             self.run = True
@@ -348,7 +379,7 @@ class MyServer(Server):
                 zombie.update(self.clients[0].soldier)
         for client in self.clients:
             for zombie in self.zombies:
-                message = [ zombie.rect.centerx, zombie.rect.centery, zombie.orientation ]
+                message = [ zombie.rect.centerx, zombie.rect.centery, zombie.orientation, zombie.angle ]
                 client.Send({'action':'zombieMouvements','id':zombie.getId(),'message':message})
 
     def send_shots(self):
@@ -366,6 +397,11 @@ class MyServer(Server):
         for client in self.clients:
             client.Send({'action':'removeShot','id':shot.getId()})
 
+    def sendManche(self):
+        for client in self.clients:
+            global manche
+            client.Send({'action':'manche','message':manche})
+
     # MAIN LOOP
     def launch_game(self):
         """Main function of the game"""
@@ -378,15 +414,22 @@ class MyServer(Server):
         # Elements
         wait_image, wait_rect = load_png('Pics/wait.png')
         self.screen.blit(wait_image, wait_rect)
-
+        temps = time.time()
+        
         while True:
             clock.tick(60)
             self.Pump()
 
             if self.run:
+                
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         quitter()
+
+                diff = time.time() - temps
+                if (time.time() - temps) > 10 :
+                    my_server.nouveauZombie()
+                    temps = time.time()
 
                 # updates
                 self.send_soldiers()

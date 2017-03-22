@@ -11,6 +11,9 @@ import time
 from pygame.locals import *
 import random
 from PodSixNet.Connection import connection, ConnectionListener
+pygame.font.init()
+font = pygame.font.Font(None, 60)
+manche = 0
 
 # FUNCTIONS
 def load_png(name):
@@ -44,7 +47,15 @@ class Shot(pygame.sprite.Sprite, ConnectionListener):
 
     def __init__(self, id, x, y, orientation):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_png('Pics/shot_n_w.png')
+        self.image, self.rect = load_png('Pics/shot/tir-e.png')
+        self.image_n,_ = load_png("Pics/shot/tir-n.png")
+        self.image_s,_ = load_png("Pics/shot/tir-s.png")
+        self.image_w,_ = load_png("Pics/shot/tir-w.png")
+        self.image_e,_ = load_png("Pics/shot/tir-e.png")
+        self.image_n_e,_ = load_png("Pics/shot/tir-ne.png")
+        self.image_s_e,_ = load_png("Pics/shot/tir-se.png")
+        self.image_n_w,_ = load_png("Pics/shot/tir-nw.png")
+        self.image_s_w,_ = load_png("Pics/shot/tir-sw.png")
         self.orientation = orientation
         self.rect.x = x
         self.rect.y = y
@@ -54,6 +65,22 @@ class Shot(pygame.sprite.Sprite, ConnectionListener):
         self.rect.centerx = x
         self.rect.centery = y
         self.orientation = orientation
+        if self.orientation == 'n':
+            self.image = self.image_n
+        elif self.orientation == 's':
+            self.image = self.image_s
+        elif self.orientation == 'w':
+            self.image = self.image_w
+        elif self.orientation == 'e':
+            self.image = self.image_e
+        elif self.orientation == 'ne':
+            self.image = self.image_n_e
+        elif self.orientation == 'nw':
+            self.image = self.image_n_w
+        elif self.orientation == 'se':
+            self.image = self.image_s_e
+        elif self.orientation == 'sw':
+            self.image = self.image_s_w
 
     def Network_shots(self,data):
         print data['message']
@@ -88,6 +115,10 @@ class GameClient(ConnectionListener):
         print('error: %s', data['error'][1])
         connection.Close()
 
+    def Network_manche(self, data):
+        global manche 
+        manche = data['message']
+
     def Network_disconnected(self, data):
         print('Server disconnected')
         quitter()
@@ -95,18 +126,20 @@ class GameClient(ConnectionListener):
 class Zombie(pygame.sprite.Sprite):
     """Class for the zombie"""
 
-    def __init__(self, id, x, y, orientation):
+    def __init__(self, id, x, y, orientation, angle):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_png('Pics/zombie_e.png')
+        self.image, self.rect = load_png('Pics/zombie.png')
         self.orientation = orientation
+        self.angle = angle
         self.rect.centerx = x
         self.rect.centery = y
         self.id = id
 
-    def update(self, x, y, orientation):
+    def update(self, x, y, orientation, angle):
         self.rect.centerx = x
         self.rect.centery = y
         self.orientation = orientation
+        self.angle = angle
 
     def getImage(self):
         return self.image
@@ -162,14 +195,14 @@ class ZombieGroups(pygame.sprite.Sprite, ConnectionListener):
 
     def Network_zombie(self,data):
         print data['message']
-        nouveauZombie = Zombie(data['id'],data['message'][0],data['message'][1],data['message'][2])
+        nouveauZombie = Zombie(data['id'],data['message'][0],data['message'][1],data['message'][2],data['message'][3])
         self.zombiesSprite.add(nouveauZombie)
         self.zombies.append(nouveauZombie)
 
     def Network_zombieMouvements(self,data):
         for zombie in self.zombiesSprite:
             if zombie.getId()==data['id']:
-                zombie.update(data['message'][0],data['message'][1],data['message'][2])
+                zombie.update(data['message'][0],data['message'][1],data['message'][2],data['message'][3])
 
     def Network_removeZombie(self,data):
         for zombie in self.zombiesSprite:
@@ -329,7 +362,7 @@ if __name__ == '__main__':
     cameraY = 0
 
     while True:
-        clock.tick(60)
+        clock.tick(120)
         connection.Pump()
         game_client.Pump()
 
@@ -366,10 +399,13 @@ if __name__ == '__main__':
                 screen.blit(soldier.getImage(),(soldier.getX()-cameraX, soldier.getY()-cameraY))
 
             for zombie in zombie_sprite.zombies:
-                screen.blit(zombie.getImage(), (zombie.getX()-cameraX,zombie.getY()-cameraY))
+                screen.blit(pygame.transform.rotate(zombie.image, zombie.angle), (zombie.getX()-cameraX,zombie.getY()-cameraY))
 
             for shot in shots_sprite.shots:
                 screen.blit(shot.getImage(), (shot.getX()-cameraX,shot.getY()-cameraY))
+
+            textImg = font.render(str(manche), 1, (255,0,0))
+            screen.blit( textImg, (0,3*font.get_linesize()) )
 
             # soldier_sprite.clear(screen, background_image)
             # soldier_sprite.draw(screen)
