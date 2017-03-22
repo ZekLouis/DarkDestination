@@ -183,15 +183,15 @@ class Zombie(pygame.sprite.Sprite):
         self.rect.y = SPAWNZOMBIE[spawnNumber].getY()
 
     def update(self, soldier):
+        global manche
+        
         vectDir = getVecteurDirecteur(Vec2d(self.rect.x,self.rect.y),Vec2d(soldier.getX(),soldier.getY()),3)
         angle = self.angle
-        global manche
+        
         if vectDir:
             self.angle = math.atan2(vectDir.x, vectDir.y)*180/math.pi
             self.rect.x += vectDir.x*((coeffManche*manche)/2)*vitesseZombie
             self.rect.y += vectDir.y*((coeffManche*manche)/2)*vitesseZombie
-            print ((coeffManche*manche)/2)*vitesseZombie
-            print vitesseZombie
         else : 
             self.angle = angle
 
