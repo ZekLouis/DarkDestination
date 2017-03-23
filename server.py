@@ -20,6 +20,7 @@ from vector2D import Vec2d
 import niveau
 global idShot
 idShot = 0
+idZombie = 0
 maps = niveau.carte
 vitesse = 10
 vitesseDiag = math.sqrt((vitesse*vitesse)/2)
@@ -107,21 +108,21 @@ class Shot(pygame.sprite.Sprite):
 
     def update(self):
         if self.orientation == 'nw':
-            self.rect = self.rect.move([-vitesseDiag,-vitesseDiag])
+            self.rect = self.rect.move([-vitesseDiag*2,-vitesseDiag*2])
         elif self.orientation == 'ne':
-            self.rect = self.rect.move([vitesseDiag,-vitesseDiag])
+            self.rect = self.rect.move([vitesseDiag*2,-vitesseDiag*2])
         elif self.orientation == 'sw':
-            self.rect = self.rect.move([-vitesseDiag,vitesseDiag])
+            self.rect = self.rect.move([-vitesseDiag*2,vitesseDiag*2])
         elif self.orientation == 'se':
-            self.rect = self.rect.move([vitesseDiag,vitesseDiag])
+            self.rect = self.rect.move([vitesseDiag*2,vitesseDiag*2])
         elif self.orientation == 'n':
-            self.rect = self.rect.move([0,-vitesse])
+            self.rect = self.rect.move([0,-vitesse*2])
         elif self.orientation == 's':
-            self.rect = self.rect.move([0,vitesse])
+            self.rect = self.rect.move([0,vitesse*2])
         elif self.orientation == 'w':
-            self.rect = self.rect.move([-vitesse,0])
+            self.rect = self.rect.move([-vitesse*2,0])
         elif self.orientation == 'e':
-            self.rect = self.rect.move([vitesse,0])
+            self.rect = self.rect.move([vitesse*2,0])
 
         if pygame.sprite.spritecollide(self, MAP, False):
             my_server.shots.remove(self)
@@ -327,9 +328,14 @@ class MyServer(Server):
 
     def nouveauZombie(self):
         print 'NOUVEAU ZOMBIE SPAWN'
+        global idZombie
+        # On choisi un lieu de spawn parmi ceux qui existe
         randspawn = randint(0,len(SPAWNZOMBIE)-1)
-        nouveau_zombie = Zombie(randspawn, len(self.zombies))
+
+        nouveau_zombie = Zombie(randspawn, idZombie)
+        idZombie += 1
         self.zombies.append(nouveau_zombie)
+        # On envoi le nouveau zombie a chaque client
         for client in self.clients:
                 message = [ nouveau_zombie.rect.centerx, nouveau_zombie.rect.centery, nouveau_zombie.orientation, nouveau_zombie.angle ]
                 client.Send({'action':'zombie','id':nouveau_zombie.getId(),'message':message})
@@ -378,12 +384,6 @@ class MyServer(Server):
             client.Send({'action':'soldier', 'soldier1':message1, 'soldier2':message2})
 
     def send_zombies(self):
-        for zombie in self.zombies:
-            # On regarde lequel des deux soldats est le plus prêt du zombie
-            if math.sqrt((self.clients[0].soldier.rect.x - zombie.rect.x)**2 + (self.clients[0].soldier.rect.y - zombie.rect.y)**2) > math.sqrt((self.clients[1].soldier.rect.x - zombie.rect.x)**2 + (self.clients[1].soldier.rect.y - zombie.rect.y)**2):
-                zombie.update(self.clients[1].soldier)
-            else:
-                zombie.update(self.clients[0].soldier)
         for client in self.clients:
             for zombie in self.zombies:
                 message = [ zombie.rect.centerx, zombie.rect.centery, zombie.orientation, zombie.angle ]
@@ -392,7 +392,6 @@ class MyServer(Server):
     def send_shots(self):
         for client in self.clients:
             for shot in self.shots:
-                shot.update()
                 message = [ shot.rect.centerx, shot.rect.centery, shot.orientation ]
                 client.Send({'action':'shotsMouvements','id':shot.getId(),'message':message})
 
@@ -434,11 +433,22 @@ class MyServer(Server):
                         quitter()
 
                 diff = time.time() - temps
+                # On crée un nouveau zombie toutes les 10 secondes
                 if (time.time() - temps) > 10 :
                     my_server.nouveauZombie()
                     temps = time.time()
 
-                # updates
+                # updates des différents zombies
+                for zombie in self.zombies:
+                    # On regarde lequel des deux soldats est le plus prêt du zombie
+                    if math.sqrt((self.clients[0].soldier.rect.x - zombie.rect.x)**2 + (self.clients[0].soldier.rect.y - zombie.rect.y)**2) > math.sqrt((self.clients[1].soldier.rect.x - zombie.rect.x)**2 + (self.clients[1].soldier.rect.y - zombie.rect.y)**2):
+                        zombie.update(self.clients[1].soldier)
+                    else:
+                        zombie.update(self.clients[0].soldier)
+
+                # updates des tirs
+                for shot in self.shots:
+                    shot.update()
                 self.send_soldiers()
                 self.send_zombies()
                 self.send_shots()
@@ -469,11 +479,11 @@ if __name__ == '__main__':
             elif char == "S":
                 spawn = SpawnSoldier(x,y)
                 SPAWNSOLDIER.append(spawn)
-                #print '--ADD SPAWN SOLDIER--',x,':',y,'rect',block.rect
+                #print '--ADD SPAWN SOLDIER--',x,':',y,'rect',spawn.rect
             elif char == "Z":
                 spawn = SpawnZombie(x,y)
                 SPAWNZOMBIE.append(spawn)
-                #print '--ADD SPAWN ZOMBIE--',x,':',y,'rect',block.rect
+                #print '--ADD SPAWN ZOMBIE--',x,':',y,'rect',spawn.rect
             x+=20
         y+=20
 
