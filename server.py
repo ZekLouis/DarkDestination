@@ -102,8 +102,8 @@ class Shot(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.image, self.rect = load_png('Pics/shot/tir-e.png')
         self.orientation = orientation
-        self.rect.x = x
-        self.rect.y = y
+        self.rect.centerx = x
+        self.rect.centery = y
         self.id = id
 
     def update(self):
@@ -180,30 +180,30 @@ class Zombie(pygame.sprite.Sprite):
         self.id = id
         self.angle = 0
         randspawn = randint(0,len(SPAWNZOMBIE)-1)
-        self.rect.x = SPAWNZOMBIE[spawnNumber].getX()
-        self.rect.y = SPAWNZOMBIE[spawnNumber].getY()
+        self.rect.centerx = SPAWNZOMBIE[spawnNumber].getX()
+        self.rect.centery = SPAWNZOMBIE[spawnNumber].getY()
 
     def update(self, soldier):
         global manche
         
-        vectDir = getVecteurDirecteur(Vec2d(self.rect.x,self.rect.y),Vec2d(soldier.getX(),soldier.getY()),3)
+        vectDir = getVecteurDirecteur(Vec2d(self.rect.centerx,self.rect.centery),Vec2d(soldier.getX(),soldier.getY()),3)
         angle = self.angle
         
         if vectDir:
             self.angle = math.atan2(vectDir.x, vectDir.y)*180/math.pi
-            self.rect.x += vectDir.x*((coeffManche*manche)/2)*vitesseZombie
-            self.rect.y += vectDir.y*((coeffManche*manche)/2)*vitesseZombie
+            self.rect.centerx += vectDir.x*((coeffManche*manche)/2)*vitesseZombie
+            self.rect.centery += vectDir.y*((coeffManche*manche)/2)*vitesseZombie
         else : 
             self.angle = angle
 
 
-        rectx = self.rect.x
-        recty = self.rect.y
+        rectx = self.rect.centerx
+        recty = self.rect.centery
         # Vérification de la position
         if pygame.sprite.spritecollide(self, MAP, False):
             #print '---COLLIDE---',self.rect.x,self.rect.y
-            self.rect.x = rectx
-            self.rect.y = recty
+            self.rect.centerx = rectx
+            self.rect.centery = recty
 
         shots_list = pygame.sprite.spritecollide(self, my_server.shots, True)
         if shots_list:
@@ -232,15 +232,15 @@ class Soldier(pygame.sprite.Sprite):
         self.image, self.rect = load_png('Pics/survivor2/survivor_e.png')
         self.orientation = 'e'
         if number == 1:
-            self.rect.x = SPAWNSOLDIER[0].getX()
-            self.rect.y = SPAWNSOLDIER[0].getY()
+            self.rect.centerx = SPAWNSOLDIER[0].getX()
+            self.rect.centery = SPAWNSOLDIER[0].getY()
         else :
-            self.rect.x = SPAWNSOLDIER[1].getX()
-            self.rect.y = SPAWNSOLDIER[1].getY()
+            self.rect.centerx = SPAWNSOLDIER[1].getX()
+            self.rect.centery = SPAWNSOLDIER[1].getY()
 
     def update(self, keys):
-        rectx = self.rect.x
-        recty = self.rect.y
+        rectx = self.rect.centerx
+        recty = self.rect.centery
         if keys[K_UP] and keys[K_LEFT]:
             self.orientation = 'nw'
             self.rect = self.rect.move([-vitesseDiag,-vitesseDiag])
@@ -279,8 +279,8 @@ class Soldier(pygame.sprite.Sprite):
         # Vérification de la position
         if pygame.sprite.spritecollide(self, MAP, False):
             #print '---COLLIDE---',self.rect.x,self.rect.y
-            self.rect.x = rectx
-            self.rect.y = recty
+            self.rect.centerx = rectx
+            self.rect.centery = recty
 
         if pygame.sprite.spritecollide(self, my_server.zombies, False):
             print 'MORT'
@@ -290,10 +290,10 @@ class Soldier(pygame.sprite.Sprite):
 
 
     def getX(self):
-        return self.rect.x
+        return self.rect.centerx
 
     def getY(self):
-        return self.rect.y
+        return self.rect.centery
 
 
 # PODSIXNET *********************
@@ -441,7 +441,7 @@ class MyServer(Server):
                 # updates des différents zombies
                 for zombie in self.zombies:
                     # On regarde lequel des deux soldats est le plus prêt du zombie
-                    if math.sqrt((self.clients[0].soldier.rect.x - zombie.rect.x)**2 + (self.clients[0].soldier.rect.y - zombie.rect.y)**2) > math.sqrt((self.clients[1].soldier.rect.x - zombie.rect.x)**2 + (self.clients[1].soldier.rect.y - zombie.rect.y)**2):
+                    if math.sqrt((self.clients[0].soldier.rect.centerx - zombie.rect.centerx)**2 + (self.clients[0].soldier.rect.centery - zombie.rect.centery)**2) > math.sqrt((self.clients[1].soldier.rect.centerx - zombie.rect.centerx)**2 + (self.clients[1].soldier.rect.centery - zombie.rect.centery)**2):
                         zombie.update(self.clients[1].soldier)
                     else:
                         zombie.update(self.clients[0].soldier)

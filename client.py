@@ -49,6 +49,8 @@ class Shot(pygame.sprite.Sprite, ConnectionListener):
 
     def __init__(self, id, x, y, orientation):
         pygame.sprite.Sprite.__init__(self)
+        # sound = pygame.mixer.Sound("Sounds/shotSound.wav")
+        # sound.play()
         self.image, self.rect = load_png('Pics/shot/tir-e.png')
         self.image_n,_ = load_png("Pics/shot/tir-n.png")
         self.image_s,_ = load_png("Pics/shot/tir-s.png")
@@ -59,8 +61,8 @@ class Shot(pygame.sprite.Sprite, ConnectionListener):
         self.image_n_w,_ = load_png("Pics/shot/tir-nw.png")
         self.image_s_w,_ = load_png("Pics/shot/tir-sw.png")
         self.orientation = orientation
-        self.rect.x = x
-        self.rect.y = y
+        self.rect.centerx = x
+        self.rect.centery = y
         self.id = id
 
     def update(self, x, y, orientation):
@@ -88,10 +90,10 @@ class Shot(pygame.sprite.Sprite, ConnectionListener):
         return self.image
 
     def getX(self):
-        return self.rect.x
+        return self.rect.centerx
 
     def getY(self):
-        return self.rect.y
+        return self.rect.centery
 
     def getId(self):
         return self.id
@@ -150,10 +152,10 @@ class Zombie(pygame.sprite.Sprite):
         return self.image
 
     def getX(self):
-        return self.rect.x
+        return self.rect.centerx
 
     def getY(self):
-        return self.rect.y
+        return self.rect.centery
 
     def getId(self):
         return self.id
@@ -261,10 +263,10 @@ class Soldier(pygame.sprite.Sprite, ConnectionListener):
         self.Pump()
 
     def getX(self):
-        return self.rect.x
+        return self.rect.centerx
 
     def getY(self):
-        return self.rect.y
+        return self.rect.centery
 
     def getImage(self):
         return self.image
@@ -314,10 +316,10 @@ class Soldier2(pygame.sprite.Sprite, ConnectionListener):
         self.Pump()
 
     def getX(self):
-        return self.rect.x
+        return self.rect.centerx
 
     def getY(self):
-        return self.rect.y
+        return self.rect.centery
 
     def getImage(self):
         return self.image
@@ -337,6 +339,7 @@ if __name__ == '__main__':
 
     # Init Pygame
     pygame.init()
+    # pygame.mixer.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     clock = pygame.time.Clock()
     pygame.key.set_repeat(1,1)
