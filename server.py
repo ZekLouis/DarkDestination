@@ -20,10 +20,10 @@ from vector2D import Vec2d
 import niveau
 global idShot
 idShot = 0
-idZombie = 0
 maps = niveau.carte
-vitesse = 10
+vitesse = 5
 vitesseDiag = math.sqrt((vitesse*vitesse)/2)
+# Vitesse du zombie (Coefficient)
 vitesseZombie = 1.1
 zombieTues = 0
 global manche
@@ -102,8 +102,8 @@ class Shot(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.image, self.rect = load_png('Pics/shot/tir-e.png')
         self.orientation = orientation
-        self.rect.centerx = x
-        self.rect.centery = y
+        self.rect.x = x
+        self.rect.y = y
         self.id = id
 
     def update(self):
@@ -180,30 +180,27 @@ class Zombie(pygame.sprite.Sprite):
         self.id = id
         self.angle = 0
         randspawn = randint(0,len(SPAWNZOMBIE)-1)
-        self.rect.centerx = SPAWNZOMBIE[spawnNumber].getX()
-        self.rect.centery = SPAWNZOMBIE[spawnNumber].getY()
+        self.rect.x = SPAWNZOMBIE[randspawn].getX()
+        self.rect.y = SPAWNZOMBIE[randspawn].getY()
 
     def update(self, soldier):
         global manche
-        
-        vectDir = getVecteurDirecteur(Vec2d(self.rect.centerx,self.rect.centery),Vec2d(soldier.getX(),soldier.getY()),3)
-        angle = self.angle
-        
+
+        vectDir = getVecteurDirecteur(Vec2d(self.rect.x,self.rect.y),Vec2d(soldier.getX(),soldier.getY()),3)
+
         if vectDir:
             self.angle = math.atan2(vectDir.x, vectDir.y)*180/math.pi
-            self.rect.centerx += vectDir.x*((coeffManche*manche)/2)*vitesseZombie
-            self.rect.centery += vectDir.y*((coeffManche*manche)/2)*vitesseZombie
-        else : 
-            self.angle = angle
+            self.rect.x += vectDir.x*((coeffManche*manche)/2)*vitesseZombie
+            self.rect.y += vectDir.y*((coeffManche*manche)/2)*vitesseZombie
 
 
-        rectx = self.rect.centerx
-        recty = self.rect.centery
+        rectx = self.rect.x
+        recty = self.rect.y
         # Vérification de la position
         if pygame.sprite.spritecollide(self, MAP, False):
             #print '---COLLIDE---',self.rect.x,self.rect.y
-            self.rect.centerx = rectx
-            self.rect.centery = recty
+            self.rect.x = rectx
+            self.rect.y = recty
 
         shots_list = pygame.sprite.spritecollide(self, my_server.shots, True)
         if shots_list:
@@ -232,15 +229,15 @@ class Soldier(pygame.sprite.Sprite):
         self.image, self.rect = load_png('Pics/survivor2/survivor_e.png')
         self.orientation = 'e'
         if number == 1:
-            self.rect.centerx = SPAWNSOLDIER[0].getX()
-            self.rect.centery = SPAWNSOLDIER[0].getY()
+            self.rect.x = SPAWNSOLDIER[0].getX()
+            self.rect.y = SPAWNSOLDIER[0].getY()
         else :
-            self.rect.centerx = SPAWNSOLDIER[1].getX()
-            self.rect.centery = SPAWNSOLDIER[1].getY()
+            self.rect.x = SPAWNSOLDIER[1].getX()
+            self.rect.y = SPAWNSOLDIER[1].getY()
 
     def update(self, keys):
-        rectx = self.rect.centerx
-        recty = self.rect.centery
+        rectx = self.rect.x
+        recty = self.rect.y
         if keys[K_UP] and keys[K_LEFT]:
             self.orientation = 'nw'
             self.rect = self.rect.move([-vitesseDiag,-vitesseDiag])
@@ -269,31 +266,30 @@ class Soldier(pygame.sprite.Sprite):
         global idShot
 
         if keys[K_SPACE]:
-            shot = Shot(idShot, self.rect.centerx,self.rect.centery,self.orientation)
+            shot = Shot(idShot, self.rect.x,self.rect.y,self.orientation)
             my_server.shots.add(shot)
             for client in my_server.clients:
-                message = [ shot.rect.centerx, shot.rect.centery, shot.orientation ]
+                message = [ shot.rect.x, shot.rect.y, shot.orientation ]
                 client.Send({'action':'shots','id':shot.getId(),'message':message})
             idShot += 1
 
         # Vérification de la position
         if pygame.sprite.spritecollide(self, MAP, False):
             #print '---COLLIDE---',self.rect.x,self.rect.y
-            self.rect.centerx = rectx
-            self.rect.centery = recty
+            self.rect.x = rectx
+            self.rect.y = recty
 
         if pygame.sprite.spritecollide(self, my_server.zombies, False):
-            print 'MORT'
             for client in my_server.clients:
                 client.Send({'action':'end'})
 
 
 
     def getX(self):
-        return self.rect.centerx
+        return self.rect.x
 
     def getY(self):
-        return self.rect.centery
+        return self.rect.y
 
 
 # PODSIXNET *********************
@@ -322,22 +318,21 @@ class MyServer(Server):
         Server.__init__(self, *args, **kwargs)
         self.clients = []
         self.run = False
+        self.idZombie = 0
         pygame.init()
         self.screen = pygame.display.set_mode((128, 128))
         print('Server launched')
 
     def nouveauZombie(self):
-        print 'NOUVEAU ZOMBIE SPAWN'
-        global idZombie
         # On choisi un lieu de spawn parmi ceux qui existe
         randspawn = randint(0,len(SPAWNZOMBIE)-1)
 
-        nouveau_zombie = Zombie(randspawn, idZombie)
-        idZombie += 1
+        nouveau_zombie = Zombie(randspawn, self.idZombie)
+        self.idZombie += 1
         self.zombies.append(nouveau_zombie)
         # On envoi le nouveau zombie a chaque client
         for client in self.clients:
-                message = [ nouveau_zombie.rect.centerx, nouveau_zombie.rect.centery, nouveau_zombie.orientation, nouveau_zombie.angle ]
+                message = [ nouveau_zombie.rect.x, nouveau_zombie.rect.y, nouveau_zombie.orientation, nouveau_zombie.angle ]
                 client.Send({'action':'zombie','id':nouveau_zombie.getId(),'message':message})
 
     def Connected(self, channel, addr):
@@ -361,7 +356,7 @@ class MyServer(Server):
                 global manche
                 client.Send({'action':'manche','message':manche})
                 for zombie in self.zombies:
-                    message = [ zombie.rect.centerx, zombie.rect.centery, zombie.orientation, zombie.angle ]
+                    message = [ zombie.rect.x, zombie.rect.y, zombie.orientation, zombie.angle ]
                     client.Send({'action':'zombie','id':zombie.getId(),'message':message})
 
             self.run = True
@@ -378,21 +373,21 @@ class MyServer(Server):
             pass
         soldier1 = self.clients[0].soldier
         soldier2 = self.clients[1].soldier
-        message1 = [ soldier1.rect.centerx, soldier1.rect.centery, soldier1.orientation ]
-        message2 = [ soldier2.rect.centerx, soldier2.rect.centery, soldier2.orientation ]
+        message1 = [ soldier1.rect.x, soldier1.rect.y, soldier1.orientation ]
+        message2 = [ soldier2.rect.x, soldier2.rect.y, soldier2.orientation ]
         for client in self.clients:
             client.Send({'action':'soldier', 'soldier1':message1, 'soldier2':message2})
 
     def send_zombies(self):
         for client in self.clients:
             for zombie in self.zombies:
-                message = [ zombie.rect.centerx, zombie.rect.centery, zombie.orientation, zombie.angle ]
+                message = [ zombie.rect.x, zombie.rect.y, zombie.orientation, zombie.angle ]
                 client.Send({'action':'zombieMouvements','id':zombie.getId(),'message':message})
 
     def send_shots(self):
         for client in self.clients:
             for shot in self.shots:
-                message = [ shot.rect.centerx, shot.rect.centery, shot.orientation ]
+                message = [ shot.rect.x, shot.rect.y, shot.orientation ]
                 client.Send({'action':'shotsMouvements','id':shot.getId(),'message':message})
 
     def sendRemoveZombie(self, zombie):
@@ -421,13 +416,13 @@ class MyServer(Server):
         wait_image, wait_rect = load_png('Pics/wait.png')
         self.screen.blit(wait_image, wait_rect)
         temps = time.time()
-        
+
         while True:
             clock.tick(60)
             self.Pump()
 
             if self.run:
-                
+
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         quitter()
@@ -441,7 +436,7 @@ class MyServer(Server):
                 # updates des différents zombies
                 for zombie in self.zombies:
                     # On regarde lequel des deux soldats est le plus prêt du zombie
-                    if math.sqrt((self.clients[0].soldier.rect.centerx - zombie.rect.centerx)**2 + (self.clients[0].soldier.rect.centery - zombie.rect.centery)**2) > math.sqrt((self.clients[1].soldier.rect.centerx - zombie.rect.centerx)**2 + (self.clients[1].soldier.rect.centery - zombie.rect.centery)**2):
+                    if math.sqrt((self.clients[0].soldier.rect.x - zombie.rect.x)**2 + (self.clients[0].soldier.rect.y - zombie.rect.y)**2) > math.sqrt((self.clients[1].soldier.rect.x - zombie.rect.x)**2 + (self.clients[1].soldier.rect.y - zombie.rect.y)**2):
                         zombie.update(self.clients[1].soldier)
                     else:
                         zombie.update(self.clients[0].soldier)

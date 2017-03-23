@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-    Very simple game with Pygame
+    Dark Destination
 """
 import sys, pygame
 import signal
@@ -32,11 +32,6 @@ def load_png(name):
         raise SystemExit
     return image,image.get_rect()
 
-# Fonction permet de faire bouger l'image de fond
-def move_background(x,y):
-    global background_rect
-    background_rect = background_rect.move([x,y])
-
 def quitter():
     pygame.display.quit()
     my_pid = os.getpid()
@@ -51,40 +46,31 @@ class Shot(pygame.sprite.Sprite, ConnectionListener):
         pygame.sprite.Sprite.__init__(self)
         # sound = pygame.mixer.Sound("Sounds/shotSound.wav")
         # sound.play()
-        self.image, self.rect = load_png('Pics/shot/tir-e.png')
-        self.image_n,_ = load_png("Pics/shot/tir-n.png")
-        self.image_s,_ = load_png("Pics/shot/tir-s.png")
-        self.image_w,_ = load_png("Pics/shot/tir-w.png")
-        self.image_e,_ = load_png("Pics/shot/tir-e.png")
-        self.image_n_e,_ = load_png("Pics/shot/tir-ne.png")
-        self.image_s_e,_ = load_png("Pics/shot/tir-se.png")
-        self.image_n_w,_ = load_png("Pics/shot/tir-nw.png")
-        self.image_s_w,_ = load_png("Pics/shot/tir-sw.png")
         self.orientation = orientation
+        if self.orientation == 'n':
+            self.image, self.rect = load_png("Pics/shot/tir-n.png")
+        elif self.orientation == 's':
+            self.image, self.rect = load_png("Pics/shot/tir-s.png")
+        elif self.orientation == 'w':
+            self.image, self.rect = load_png("Pics/shot/tir-w.png")
+        elif self.orientation == 'e':
+            self.image, self.rect = load_png("Pics/shot/tir-e.png")
+        elif self.orientation == 'ne':
+            self.image, self.rect = load_png("Pics/shot/tir-ne.png")
+        elif self.orientation == 'nw':
+            self.image, self.rect = load_png("Pics/shot/tir-nw.png")
+        elif self.orientation == 'se':
+            self.image, self.rect = load_png("Pics/shot/tir-se.png")
+        elif self.orientation == 'sw':
+            self.image, self.rect = load_png("Pics/shot/tir-sw.png")
         self.rect.centerx = x
-        self.rect.centery = y
+        self.rect.y = y
         self.id = id
 
     def update(self, x, y, orientation):
         self.rect.centerx = x
-        self.rect.centery = y
+        self.rect.y = y
         self.orientation = orientation
-        if self.orientation == 'n':
-            self.image = self.image_n
-        elif self.orientation == 's':
-            self.image = self.image_s
-        elif self.orientation == 'w':
-            self.image = self.image_w
-        elif self.orientation == 'e':
-            self.image = self.image_e
-        elif self.orientation == 'ne':
-            self.image = self.image_n_e
-        elif self.orientation == 'nw':
-            self.image = self.image_n_w
-        elif self.orientation == 'se':
-            self.image = self.image_s_e
-        elif self.orientation == 'sw':
-            self.image = self.image_s_w
 
     def getImage(self):
         return self.image
@@ -93,7 +79,7 @@ class Shot(pygame.sprite.Sprite, ConnectionListener):
         return self.rect.centerx
 
     def getY(self):
-        return self.rect.centery
+        return self.rect.y
 
     def getId(self):
         return self.id
@@ -117,13 +103,12 @@ class GameClient(ConnectionListener):
         connection.Close()
 
     def Network_manche(self, data):
-        global manche 
+        global manche
         manche = data['message']
 
     def Network_end(self, data):
-        print "Fin de la partie"
         game_client.run = False
-        global finDePartie 
+        global finDePartie
         finDePartie = True
 
     def Network_disconnected(self, data):
@@ -139,12 +124,12 @@ class Zombie(pygame.sprite.Sprite):
         self.orientation = orientation
         self.angle = angle
         self.rect.centerx = x
-        self.rect.centery = y
+        self.rect.y = y
         self.id = id
 
     def update(self, x, y, orientation, angle):
         self.rect.centerx = x
-        self.rect.centery = y
+        self.rect.y = y
         self.orientation = orientation
         self.angle = angle
 
@@ -155,7 +140,7 @@ class Zombie(pygame.sprite.Sprite):
         return self.rect.centerx
 
     def getY(self):
-        return self.rect.centery
+        return self.rect.y
 
     def getId(self):
         return self.id
@@ -167,26 +152,21 @@ class ShotsGroups(pygame.sprite.Sprite, ConnectionListener):
 
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.shots = []
         self.shotsSprite = pygame.sprite.RenderClear()
 
     def Network_shots(self,data):
-        print '--- Nouveau shot ---'
-        print data['message']
         nouveauShot = Shot(data['id'],data['message'][0],data['message'][1],data['message'][2])
         self.shotsSprite.add(nouveauShot)
-        self.shots.append(nouveauShot)
 
     def Network_shotsMouvements(self,data):
         for shot in self.shotsSprite:
+            # On cherche le bon shot parmi tous les shots
             if shot.getId()==data['id']:
                 shot.update(data['message'][0],data['message'][1],data['message'][2])
 
     def Network_removeShot(self,data):
         for shot in self.shotsSprite:
             if shot.getId()==data['id']:
-                print '-- REMOVING --',data['id']
-                self.shots.remove(shot)
                 self.shotsSprite.remove(shot)
 
     def update(self):
@@ -197,14 +177,11 @@ class ZombieGroups(pygame.sprite.Sprite, ConnectionListener):
 
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.zombies = []
         self.zombiesSprite = pygame.sprite.RenderClear()
 
     def Network_zombie(self,data):
-        print data['message']
         nouveauZombie = Zombie(data['id'],data['message'][0],data['message'][1],data['message'][2],data['message'][3])
         self.zombiesSprite.add(nouveauZombie)
-        self.zombies.append(nouveauZombie)
 
     def Network_zombieMouvements(self,data):
         for zombie in self.zombiesSprite:
@@ -214,8 +191,6 @@ class ZombieGroups(pygame.sprite.Sprite, ConnectionListener):
     def Network_removeZombie(self,data):
         for zombie in self.zombiesSprite:
             if zombie.getId()==data['id']:
-                print '-- REMOVING --',data['id']
-                self.zombies.remove(zombie)
                 self.zombiesSprite.remove(zombie)
 
     def update(self):
@@ -266,7 +241,7 @@ class Soldier(pygame.sprite.Sprite, ConnectionListener):
         return self.rect.centerx
 
     def getY(self):
-        return self.rect.centery
+        return self.rect.y
 
     def getImage(self):
         return self.image
@@ -319,7 +294,7 @@ class Soldier2(pygame.sprite.Sprite, ConnectionListener):
         return self.rect.centerx
 
     def getY(self):
-        return self.rect.centery
+        return self.rect.y
 
     def getImage(self):
         return self.image
@@ -348,8 +323,6 @@ if __name__ == '__main__':
     background_image, background_rect = load_png('Pics/map.png')
     background_image = pygame.transform.scale(background_image, (background_rect.width*2,background_rect.height*2))
 
-
-    # background_image = pygame.transform.scale2x(background_image)
     wait_image, wait_rect = load_png('Pics/wait1.png')
     wait_rect.center = [ SCREEN_WIDTH/2, SCREEN_HEIGHT/2 ]
     screen.blit(background_image, background_rect)
@@ -390,7 +363,6 @@ if __name__ == '__main__':
             shots_sprite.update()
 
             # drawings
-            # background_rect = background_rect.move([2,2])
 
             screen.fill((0,0,0))
 
@@ -404,13 +376,13 @@ if __name__ == '__main__':
 
 
             for soldier in soldier_sprite:
-                screen.blit(soldier.getImage(),(soldier.getX()-cameraX, soldier.getY()-cameraY))
+                screen.blit(soldier.getImage(),(soldier.getX()-cameraX+(soldier.rect.width/2), soldier.getY()-cameraY+(soldier.rect.height/2)))
 
-            for zombie in zombie_sprite.zombies:
+            for zombie in zombie_sprite.zombiesSprite:
                 screen.blit(pygame.transform.rotate(zombie.image, zombie.angle), (zombie.getX()-cameraX,zombie.getY()-cameraY))
 
-            for shot in shots_sprite.shots:
-                screen.blit(shot.getImage(), (shot.getX()-cameraX,shot.getY()-cameraY))
+            for shot in shots_sprite.shotsSprite:
+                screen.blit(shot.getImage(), (shot.getX()-cameraX+50,shot.getY()-cameraY+50))
 
             textImg = font.render("Manche : "+str(manche), 1, (153,0,0))
             screen.blit( textImg, (0,0) )
@@ -421,7 +393,7 @@ if __name__ == '__main__':
         else: # game is not running
             if not finDePartie :
                 screen.blit(wait_image, wait_rect)
-                player1 = True  
+                player1 = True
             else :
                 text1 = font.render("Fin de partie", 1, (153,0,0))
                 text2 = font.render("Vous avez atteint la manche : "+str(manche), 1, (153,0,0))
