@@ -281,6 +281,13 @@ class Soldier(pygame.sprite.Sprite):
             self.rect.x = rectx
             self.rect.y = recty
 
+        if pygame.sprite.spritecollide(self, my_server.zombies, False):
+            print 'MORT'
+            for client in my_server.clients:
+                client.Send({'action':'end'})
+
+
+
     def getX(self):
         return self.rect.x
 

@@ -12,8 +12,10 @@ from pygame.locals import *
 import random
 from PodSixNet.Connection import connection, ConnectionListener
 pygame.font.init()
-font = pygame.font.Font(None, 60)
+font = pygame.font.Font("Font/zombnze.ttf", 60)
 manche = 0
+
+finDePartie = False
 
 # FUNCTIONS
 def load_png(name):
@@ -82,9 +84,6 @@ class Shot(pygame.sprite.Sprite, ConnectionListener):
         elif self.orientation == 'sw':
             self.image = self.image_s_w
 
-    def Network_shots(self,data):
-        print data['message']
-
     def getImage(self):
         return self.image
 
@@ -118,6 +117,12 @@ class GameClient(ConnectionListener):
     def Network_manche(self, data):
         global manche 
         manche = data['message']
+
+    def Network_end(self, data):
+        print "Fin de la partie"
+        game_client.run = False
+        global finDePartie 
+        finDePartie = True
 
     def Network_disconnected(self, data):
         print('Server disconnected')
@@ -404,14 +409,20 @@ if __name__ == '__main__':
             for shot in shots_sprite.shots:
                 screen.blit(shot.getImage(), (shot.getX()-cameraX,shot.getY()-cameraY))
 
-            textImg = font.render(str(manche), 1, (255,0,0))
-            screen.blit( textImg, (0,3*font.get_linesize()) )
+            textImg = font.render("Manche : "+str(manche), 1, (153,0,0))
+            screen.blit( textImg, (0,0) )
 
             # soldier_sprite.clear(screen, background_image)
             # soldier_sprite.draw(screen)
 
         else: # game is not running
-            screen.blit(wait_image, wait_rect)
-            player1 = True
+            if not finDePartie :
+                screen.blit(wait_image, wait_rect)
+                player1 = True  
+            else :
+                text1 = font.render("Fin de partie", 1, (153,0,0))
+                text2 = font.render("Vous avez atteint la manche : "+str(manche), 1, (153,0,0))
+                screen.blit( text1, (3*font.get_linesize(),3*font.get_linesize()) )
+                screen.blit( text2, (3*font.get_linesize(),4*font.get_linesize()) )
 
         pygame.display.flip()
